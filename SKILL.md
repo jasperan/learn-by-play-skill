@@ -332,3 +332,57 @@ To brand for a specific organization:
 - Update the nav logo (the small rounded box with a letter)
 - Update the hero gradient to use brand colors
 - Keep the dark theme — it makes interactive widgets visually striking and reduces eye strain for technical content
+
+## Project Scaffolding
+
+Run the scaffold script to bootstrap a new project with the full design system pre-configured:
+
+```bash
+bash /path/to/learn-by-play/scripts/scaffold.sh my-interactive-guide
+```
+
+This creates a Next.js project with the starter CSS, widget directory, barrel exports, scroll animations, and static export config already wired up. See `scripts/scaffold.sh` for details.
+
+## Anti-Patterns to Avoid
+
+These are mistakes that consistently produce poor results. Understanding why they fail helps you make better choices.
+
+### Don't nest inputs inside buttons
+Placing `<input>` elements inside `<button>` creates focus/blur race conditions — the input renders, gets autoFocus, then immediately blurs as the button click event completes. Instead, use conditional rendering: show the button OR the input, never one inside the other. Use `useRef` + `useEffect` for focus management, and add a ~150ms delay on blur handlers.
+
+### Don't use `autoFocus` for dynamically rendered inputs
+React's `autoFocus` prop races with the component mount cycle. Instead, use a ref and focus in a `useEffect` that depends on the editing state:
+```jsx
+const inputRef = useRef(null);
+useEffect(() => {
+  if (isEditing && inputRef.current) {
+    inputRef.current.focus();
+    inputRef.current.select();
+  }
+}, [isEditing]);
+```
+
+### Don't overwrite coordinates with projection
+When projecting 3D points to 2D screen coordinates, never spread projected `{x, y}` over the original data point — it overwrites the data-space coordinates you need for distance calculations. Use distinct names: `screenX`, `screenY`, `depth`, `scale`.
+
+### Don't use linear mapping for click-to-query in projected spaces
+If your visualization applies rotation/perspective, click positions need inverse projection (e.g., Newton's method), not simple `clickX / canvasWidth` normalization. The mapping between screen and data space is nonlinear.
+
+### Don't make all widgets the same complexity
+Vary widget complexity to maintain pacing. A page of 9 equally complex widgets is exhausting. Mix simple sliders, medium interactive graphs, and one or two complex animated pipelines. The simpler widgets give readers a breather between dense sections.
+
+### Don't hardcode demo values
+Use seeded random generation so values change between runs while remaining deterministic within a run. This makes demos feel alive without being unpredictable. A `runId` counter + hash function works well.
+
+### Don't put all widgets in one file
+Extract each widget to its own `"use client"` file. A 3000-line page.tsx is unmaintainable and prevents parallel development. Keep page.tsx under 300 lines (imports + layout + prose).
+
+### Don't forget mobile
+- Nav links overflow on mobile — use `overflow-x-auto whitespace-nowrap scrollbar-hide`
+- Widget split-panes should collapse to single column: `grid-cols-1 md:grid-cols-2`
+- Hero h1 should be responsive: `text-3xl md:text-5xl`
+- Canvas/SVG widths should use `w-full` with fixed aspect ratios
+
+## Version History
+
+- **v1.0.0** (2026-04-01): Initial release. 9 widget patterns, dark theme design system, deployment config. Developed while building the Oracle AI Database interactive showcase (github.com/jasperan/visual-oracledb).
