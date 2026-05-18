@@ -124,6 +124,18 @@ Choose colors that are visually distinct and maintain WCAG contrast against #0d0
 .json-highlight { background: rgba(34,211,238,0.15); border-radius: 2px; }
 ```
 
+### Illustration Palette (Pattern 12 only)
+A second palette for `<IllustrationPlate />` and its presets. Isolated to plates — never apply these colors elsewhere or the warm/cool contrast that gives plates their character will dilute.
+```css
+:root {
+  --illus-line: #f5ecd9;   /* cream stroke */
+  --illus-shade: #3a3a40;  /* pencil shade */
+}
+```
+
+### Sketch SVG Filter (Pattern 12 only)
+Plates apply `filter="url(#sketch)"` to give crisp SVG paths a hand-drawn jitter via `<feTurbulence>` + `<feDisplacementMap>`. The filter definition lives in the `<SketchFilterDefs />` component (exported from `illustration-plate.tsx`) which the scaffold mounts in `layout.tsx`. If you author a project manually, mount it once near `<body>`.
+
 ### Animations
 ```css
 /* Scroll-triggered reveal */
@@ -166,13 +178,47 @@ Then add `className="reveal"` to each `<section>`.
 
 ### Page Layout
 ```
-<nav>        — Sticky, backdrop-blur, scrollable links on mobile
-<hero>       — Gradient background + glow, title, subtitle with colored terms
-<toc>        — Card with linked list of all sections
-<section>*   — Repeated: heading → prose → widget → follow-up prose
-<conclusion> — Ties all concepts together
-<footer>     — Attribution
+<nav>          — Sticky, backdrop-blur, scrollable links on mobile
+<hero>         — Gradient background + glow, title, subtitle with colored terms
+<stats-strip>  — Optional. Handbook-style aggregate counts (chapters / widgets / read time / version)
+<toc>          — Card with linked sections. Optionally grouped into chapters using <details>/<summary>
+<section>*     — Repeated: heading → prose → widget → follow-up prose
+<conclusion>   — Ties all concepts together
+<footer>       — Attribution. Optionally include a <FooterMascot /> plate
 ```
+
+### Optional: Stats Hero Strip
+A row directly below the hero subtitle showing aggregate counts. Mirrors the "670+ pages, 300+ visualizations" callouts seen on cartesian.app. Hand-set props, not auto-counted. Uses `.stats-strip` styles from `starter-globals.css`. Example:
+
+```jsx
+<div className="stats-strip">
+  <div><div className="stat-number">12</div><div className="stat-label">chapters</div></div>
+  <div><div className="stat-number">47</div><div className="stat-label">widgets</div></div>
+  <div><div className="stat-number">3 hr</div><div className="stat-label">read time</div></div>
+  <div><div className="stat-number">v1.0</div><div className="stat-label">handbook</div></div>
+</div>
+```
+
+### Optional: Expandable Hierarchical TOC
+Group sections into chapters using native `<details>`/`<summary>` — zero JS, accessible by default. The `+`/`−` markers and chapter spacing are styled by `.toc summary` rules in `starter-globals.css`. Example:
+
+```jsx
+<nav className="toc">
+  <details open>
+    <summary>Chapter 1 · Foundations<span>3 sections · 8 widgets</span></summary>
+    <ul>
+      <li><a href="#concept-a">Concept A</a></li>
+      <li><a href="#concept-b">Concept B</a></li>
+    </ul>
+  </details>
+  <details>
+    <summary>Chapter 2 · Internals<span>4 sections · 11 widgets</span></summary>
+    <ul>{/* ... */}</ul>
+  </details>
+</nav>
+```
+
+The scaffold's generated `page.tsx` includes a `hashchange` listener that opens collapsed `<details>` when an inner section is targeted, so deep-link navigation works correctly.
 
 ### Section Pattern
 Each section follows this rhythm — it's important for pacing:
@@ -264,6 +310,36 @@ These are the reusable patterns for building widgets. Choose the pattern that be
 **Build phase**: "Add Point" button inserts points one at a time with edge connections.
 **Search phase**: Animated greedy walk with step-by-step traversal, comparison counter.
 **Tip**: Use geometric distribution for layer assignment. Show O(log n) vs O(n) comparison.
+
+### Pattern 10: Code Playback Player
+**Use when**: Teaching algorithm execution, recursion, state machines, anything where line-by-line variable changes are the lesson.
+**Layout**: Two-column — source code (left), state inspector (right). Below: playback controls + scrubbable timeline.
+**Key states**: `stepIndex`, `isPlaying`, `speed`
+**Data**: Pre-baked `Trace` of `{ line, vars, stack?, heap?, note? }` objects. Authors hand-write or generate steps — no eval, no language-server dependency.
+**Interaction**: ⏮ ◀ ▶/⏸ ▶ ⏭ buttons, range scrubber, speed selector (0.5×/1×/2×). Keyboard: `←`/`→` step, `space` play/pause.
+**Visual cues**: Active line highlights in cyan; changed variables pulse via `.pulse-highlight`.
+**Tip**: Use `useRef<ReturnType<typeof setInterval> | null>` and always clear in cleanup. Diff vars by `safeStringify` to mark changes correctly across non-JSON-safe values (functions, BigInts).
+**Reference**: `references/playback-widget.tsx`.
+
+### Pattern 11: Complexity / Big-O Comparison Chart
+**Use when**: Comparing algorithmic complexity classes side-by-side (sort algorithms, search structures, hashing strategies).
+**Layout**: SVG line chart (viewBox 600×360), legend toggle row above, range slider + n-indicator below, comparison table at the bottom.
+**Key states**: `n`, `scale` (`"linear"` | `"log"`), `visible` (Set of curve labels)
+**Data**: `curves: Curve[]` where each curve has `{ label, complexity, color, space? }`. Supported complexities: `O(1)`, `O(log n)`, `O(n)`, `O(n log n)`, `O(n^2)`, `O(2^n)`.
+**Interaction**: LIN/LOG scale toggle, per-curve legend toggle, n slider with vertical guide line. Live ops count per curve in the table.
+**Color coding**: Each curve's color should come from the project's terminology palette (`text-concept-*` hex values), so chart colors match prose colors.
+**Tip**: Clamp `O(2^n)` at `Number.MAX_SAFE_INTEGER`; display as `> 2^53`. Use `Math.log10(v + 1)` for log scaling to handle zero-ops curves.
+**Reference**: `references/complexity-chart.tsx`.
+
+### Pattern 12: Annotated Illustration Plate
+**Use when**: Adding visual warmth to a dark technical page — hero illustration, section dividers, footer mascot. Also for static system diagrams with labeled parts (pins reveal labels on hover/focus).
+**Layout**: Inline SVG inside a `<figure class="widget-container">`. Optional pin overlay with numbered circles; tooltips show label + description on hover/focus/tap.
+**Visual approach**: Rough-stroke SVG paths run through a `filter="url(#sketch)"` (`<feTurbulence>` + `<feDisplacementMap>`) for a hand-drawn feel without raster assets.
+**Palette**: Uses a separate cream/pencil palette (`--illus-line: #f5ecd9`, `--illus-shade: #3a3a40`) isolated to plates so it doesn't bleed into the rest of the dark theme.
+**Pre-built plates**: `<HeroPlate />` (open-book scene), `<DividerPlate />` (slim accent for between sections), `<FooterMascot />` (stylized character glyph).
+**Setup requirement**: `<SketchFilterDefs />` must be mounted once near `<body>` so plates can reference the filter. The scaffold script mounts it in `layout.tsx` automatically.
+**Tip**: Keep plates to ≤3 per page (hero, mid-divider, footer). The sketch filter is GPU-accelerated but more plates = more SVG nodes.
+**Reference**: `references/illustration-plate.tsx`.
 
 ## Deployment
 
@@ -385,4 +461,13 @@ Extract each widget to its own `"use client"` file. A 3000-line page.tsx is unma
 
 ## Version History
 
+- **v1.1.0** (2026-05-18): Cartesian-inspired visual expansion.
+  - Pattern 10: Code Playback Player (stepped execution + state inspector with scrubbable timeline)
+  - Pattern 11: Complexity / Big-O Comparison Chart (live ops counts per curve at draggable n)
+  - Pattern 12: Annotated Illustration Plate (rough-stroke SVG via sketch filter + pin overlay, plus `<HeroPlate />`, `<DividerPlate />`, `<FooterMascot />` presets)
+  - Optional Expandable Hierarchical TOC using native `<details>`/`<summary>`
+  - Optional Stats Hero Strip for handbook-style aggregate counts
+  - New design tokens: illustration palette (`--illus-line`, `--illus-shade`), playback controls, TOC styles, stats strip
+  - Reference React implementations shipped in `references/` and wired into `scripts/scaffold.sh`
+  - No breaking changes to Patterns 1–9.
 - **v1.0.0** (2026-04-01): Initial release. 9 widget patterns, dark theme design system, deployment config. Developed while building the Oracle AI Database interactive showcase (github.com/jasperan/visual-oracledb).
