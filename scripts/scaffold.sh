@@ -37,10 +37,26 @@ fi
 # Create widgets directory
 mkdir -p src/components/widgets
 
+# Copy reference widgets if present
+mkdir -p src/components/widgets
+for w in playback-widget complexity-chart illustration-plate; do
+  if [ -f "$SKILL_DIR/references/$w.tsx" ]; then
+    # convert kebab-case to PascalCase for the destination filename
+    pascal=$(echo "$w" | awk -F- '{ for(i=1;i<=NF;i++){ $i=toupper(substr($i,1,1)) substr($i,2) } print }' OFS='')
+    cp "$SKILL_DIR/references/$w.tsx" "src/components/widgets/${pascal}.tsx"
+  fi
+done
+
 # Create barrel export
 cat > src/components/widgets/index.ts << 'BARREL'
-// Export your widgets here as you build them
-// Example: export { MyWidget } from "./MyWidget";
+// Reference widgets (Patterns 10–12 from the learn-by-play skill).
+// Delete any you don't use; add your own here.
+export { default as PlaybackWidget } from "./PlaybackWidget";
+export type { PlaybackTrace, PlaybackStep } from "./PlaybackWidget";
+export { default as ComplexityChart } from "./ComplexityChart";
+export type { Curve, Complexity } from "./ComplexityChart";
+export { default as IllustrationPlate, SketchFilterDefs, HeroPlate, DividerPlate, FooterMascot } from "./IllustrationPlate";
+export type { Pin } from "./IllustrationPlate";
 BARREL
 
 # Create placeholder page
@@ -56,7 +72,26 @@ export default function Home() {
       { threshold: 0.1, rootMargin: "0px 0px -50px 0px" }
     );
     document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+
+    // Open any collapsed TOC <details> whose section is targeted by the hash
+    const openTargetedDetails = () => {
+      const id = window.location.hash.replace(/^#/, "");
+      if (!id) return;
+      const target = document.getElementById(id);
+      if (!target) return;
+      let el: HTMLElement | null = target;
+      while (el) {
+        if (el.tagName === "DETAILS") (el as HTMLDetailsElement).open = true;
+        el = el.parentElement;
+      }
+    };
+    openTargetedDetails();
+    window.addEventListener("hashchange", openTargetedDetails);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("hashchange", openTargetedDetails);
+    };
   }, []);
 
   return (
@@ -127,6 +162,7 @@ CONFIG
 cat > src/app/layout.tsx << 'LAYOUT'
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { SketchFilterDefs } from "@/components/widgets";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -140,7 +176,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
-      <body>{children}</body>
+      <body>
+        <SketchFilterDefs />
+        {children}
+      </body>
     </html>
   );
 }
