@@ -148,10 +148,11 @@ import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === "production";
 
+const repoName = process.env.REPO_NAME || "";
+
 const nextConfig: NextConfig = {
   output: "export",
-  basePath: isProd ? `/${process.env.REPO_NAME || ""}` : "",
-  assetPrefix: isProd ? `/${process.env.REPO_NAME || ""}/` : "",
+  ...(isProd && repoName ? { basePath: `/${repoName}`, assetPrefix: `/${repoName}/` } : {}),
   images: { unoptimized: true },
 };
 
