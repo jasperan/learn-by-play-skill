@@ -1,0 +1,10 @@
+{
+  "name": "learn-by-play-references-check",
+  "private": true,
+  "version": "0.0.0",
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0"
+  }
+}
